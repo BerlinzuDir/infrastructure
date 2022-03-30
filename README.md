@@ -8,4 +8,4 @@ All infrastructure related code goes here, i.e. terraform and ansible
 Download and install terraform as described [here](https://www.terraform.io/downloads).
 
 ### AWS Client
-Download anf install the aws-client as described [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+Download and install the aws-client as described [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).

@@ -61,89 +61,74 @@ resource "aws_iam_role_policy_attachment" "lambda_policy" {
 
 # API Gateway
 
-resource "aws_apigatewayv2_api" "lambda" {
-  name          = "serverless_lambda_gw"
-  protocol_type = "HTTP"
+resource "aws_api_gateway_rest_api" "decilo_core" {
+  name = "decilo-core"
 }
 
-resource "aws_apigatewayv2_stage" "lambda" {
-  api_id = aws_apigatewayv2_api.lambda.id
-
-  name        = "serverless_lambda_stage"
-  auto_deploy = true
-
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.decilo_core_api_staging.arn
-
-    format = jsonencode({
-      requestId               = "$context.requestId"
-      sourceIp                = "$context.identity.sourceIp"
-      requestTime             = "$context.requestTime"
-      protocol                = "$context.protocol"
-      httpMethod              = "$context.httpMethod"
-      resourcePath            = "$context.resourcePath"
-      routeKey                = "$context.routeKey"
-      status                  = "$context.status"
-      responseLength          = "$context.responseLength"
-      integrationErrorMessage = "$context.integrationErrorMessage"
-    }
-    )
-  }
+resource "aws_api_gateway_method" "root" {
+  rest_api_id   = aws_api_gateway_rest_api.decilo_core.id
+  resource_id   = aws_api_gateway_rest_api.decilo_core.root_resource_id
+  http_method   = "ANY"
+  authorization = "NONE"
 }
 
-resource "aws_apigatewayv2_integration" "decilo_core_api" {
-  api_id = aws_apigatewayv2_api.lambda.id
-
-  integration_uri    = aws_lambda_function.decilo_core_api.invoke_arn
-  integration_type   = "AWS_PROXY"
-  integration_method = "POST"
+resource "aws_api_gateway_integration" "root_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.decilo_core.id
+  resource_id             = aws_api_gateway_rest_api.decilo_core.root_resource_id
+  http_method             = aws_api_gateway_method.root.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.decilo_core_api.invoke_arn
 }
 
-resource "aws_apigatewayv2_route" "hello" {
-  api_id = aws_apigatewayv2_api.lambda.id
-
-  route_key = "GET /"
-  target    = "integrations/${aws_apigatewayv2_integration.decilo_core_api.id}"
-
-  depends_on = [aws_apigatewayv2_integration.decilo_core_api]
+resource "aws_api_gateway_resource" "proxy" {
+  rest_api_id = aws_api_gateway_rest_api.decilo_core.id
+  parent_id   = aws_api_gateway_rest_api.decilo_core.root_resource_id
+  path_part   = "{proxy+}"
 }
 
-resource "aws_apigatewayv2_route" "routes" {
-  api_id = aws_apigatewayv2_api.lambda.id
-
-  route_key = "GET /routes"
-  target    = "integrations/${aws_apigatewayv2_integration.decilo_core_api.id}"
-
-  depends_on = [aws_apigatewayv2_integration.decilo_core_api]
-
+resource "aws_api_gateway_method" "proxy" {
+  rest_api_id   = aws_api_gateway_rest_api.decilo_core.id
+  resource_id   = aws_api_gateway_resource.proxy.id
+  http_method   = "ANY"
+  authorization = "NONE"
 }
 
-resource "aws_apigatewayv2_route" "shipments" {
-  api_id = aws_apigatewayv2_api.lambda.id
-
-  route_key = "GET /shipments"
-  target    = "integrations/${aws_apigatewayv2_integration.decilo_core_api.id}"
-
-  depends_on = [aws_apigatewayv2_integration.decilo_core_api]
-
+resource "aws_api_gateway_integration" "proxy_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.decilo_core.id
+  resource_id             = aws_api_gateway_resource.proxy.id
+  http_method             = aws_api_gateway_method.proxy.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.decilo_core_api.invoke_arn
 }
 
-resource "aws_cloudwatch_log_group" "decilo_core_api_staging" {
-  name              = "/aws/api_gw/${aws_apigatewayv2_api.lambda.name}"
-  retention_in_days = 30
-}
-
-resource "aws_lambda_permission" "api_gw" {
+resource "aws_lambda_permission" "apigw_lambda" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.decilo_core_api.function_name
   principal     = "apigateway.amazonaws.com"
 
-  source_arn = "${aws_apigatewayv2_api.lambda.execution_arn}/*/*"
+  source_arn = "${aws_api_gateway_rest_api.decilo_core.execution_arn}/*/*/*"
 }
 
-output "base_url" {
-  description = "Base URL for API Gateway stage."
+resource "aws_api_gateway_deployment" "decilo_core" {
+  rest_api_id = aws_api_gateway_rest_api.decilo_core.id
 
-  value = aws_apigatewayv2_stage.lambda.invoke_url
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  depends_on = [
+    aws_api_gateway_method.proxy,
+    aws_api_gateway_integration.proxy_integration,
+    aws_api_gateway_method.root,
+    aws_api_gateway_integration.root_integration
+  ]
+}
+
+resource "aws_api_gateway_stage" "decilo_core" {
+  deployment_id = aws_api_gateway_deployment.decilo_core.id
+  rest_api_id   = aws_api_gateway_rest_api.decilo_core.id
+  stage_name    = "decilo-core"
 }

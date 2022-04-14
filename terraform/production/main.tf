@@ -22,7 +22,7 @@ data aws_s3_object decilo_core_api {
 }
 
 resource "aws_lambda_function" "decilo_core_api" {
-  function_name = "decilo_core_api"
+  function_name = "decilo-core-api"
   s3_bucket     = aws_s3_bucket.decilo_core_api.id
   s3_key        = data.aws_s3_object.decilo_core_api.key
   runtime       = "python3.8"
@@ -36,7 +36,7 @@ resource "aws_cloudwatch_log_group" "decilo_core_api" {
 }
 
 resource "aws_iam_role" "lambda_exec" {
-  name = "serverless_lambda"
+  name = "serverless-lambda"
 
   assume_role_policy = jsonencode({
     Version   = "2012-10-17"

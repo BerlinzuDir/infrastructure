@@ -26,7 +26,7 @@ resource "aws_lambda_function" "decilo_core_api" {
   s3_bucket     = aws_s3_bucket.decilo_core_api.id
   s3_key        = data.aws_s3_object.decilo_core_api.key
   runtime       = "python3.8"
-  handler       = "decilo_core.main.handler"
+  handler       = "main.handler"
   role          = aws_iam_role.lambda_exec.arn
 }
 

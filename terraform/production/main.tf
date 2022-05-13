@@ -10,6 +10,6 @@ terraform {
   }
 }
 
-module "decilo_core" {
+module "decilo_core_api" {
   source = "../modules/decilo-core-api"
 }

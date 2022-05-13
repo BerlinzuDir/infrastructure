@@ -9,3 +9,7 @@ terraform {
     region = "eu-central-1"
   }
 }
+
+module "decilo_core_api" {
+  source = "../modules/decilo-core-api"
+}

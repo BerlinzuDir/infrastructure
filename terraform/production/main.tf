@@ -11,5 +11,5 @@ terraform {
 }
 
 module "decilo_core" {
-  source = "../modules/decilo-core"
+  source = "../modules/decilo-core-api"
 }

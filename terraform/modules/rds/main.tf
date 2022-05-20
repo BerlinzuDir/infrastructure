@@ -7,12 +7,12 @@ resource "aws_db_subnet_group" "decilo" {
   }
 }
 
-data "aws_ssm_parameter" "rds_admin" {
-  name = "rds_admin"
+data "aws_ssm_parameter" "db_username" {
+  name = "db_username"
 }
 
-data "aws_ssm_parameter" "rds_admin_pw" {
-  name = "rds_admin_pw"
+data "aws_ssm_parameter" "db_password" {
+  name = "db_password"
 }
 
 resource "aws_security_group" "rds" {
@@ -31,8 +31,8 @@ resource "aws_db_instance" "decilo" {
   allocated_storage      = 5
   engine                 = "postgres"
   engine_version         = "14"
-  username               = data.aws_ssm_parameter.rds_admin.value
-  password               = data.aws_ssm_parameter.rds_admin_pw.value
+  username               = data.aws_ssm_parameter.db_username.value
+  password               = data.aws_ssm_parameter.db_password.value
   db_subnet_group_name   = aws_db_subnet_group.decilo.name
   vpc_security_group_ids = [aws_security_group.rds.id]
   publicly_accessible    = true
